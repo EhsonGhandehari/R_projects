@@ -1,0 +1,188 @@
+---
+title: "Scan to Scan Variation for the StellarNet Spectrometer"
+author: "Version 1.0.1"
+date: "May 8, 2015"
+output:
+  word_document: default
+---
+
+```{r setup, include=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+knitr::opts_chunk$set(cache=TRUE)
+```
+
+```{r LoadData, echo=FALSE, include=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+host.name <- system("hostname", intern=TRUE)
+if (identical(host.name, "mab")) {
+  setwd("~/git/algorithms/analysis/R/final")
+ }
+
+if (identical(host.name,"Ehson-Ghandehari-Macbook-Pro.local")) {
+  setwd("/Users/ehson/Documents/git/algorithms/analysis/R/final")}
+
+suppressWarnings(source("constant.R"))
+suppressWarnings(source(paste(path.R.final, "library.R", sep='/')))
+suppressWarnings(source(paste(path.R.final, "data.read.R", sep='/')))
+suppressWarnings(source(paste(path.R.final, "data.clean.R", sep='/')))
+suppressWarnings(source(paste(path.R.final, "data.check.R", sep='/')))
+
+```
+
+
+**Data Collection**
+
+* Date: 2014-01-12
+* Ticket: AS-295
+* Git Repo: data.mkone.co/var/git/science/vessyl/as-295.git
+* Git Branch: master
+
+**Analysis**
+
+* Ticket: VA-93
+* Git Repo: git@git.mkone.co:vessyl-algorithms/algorithms.git
+* Git Branch: va-93
+
+# Table of Contents
+
+# Revision Control
+|Revision Number|Revision Date|Notes|Owner|
+|1.0.0|2015-02-13|Initial Draft|John Peach|
+
+# Executive Summary
+
+* Variance increases with signal amplitude and wavelength
+*	Coefficient of Variation is between 0.5-5%
+*	Variance is not normally distributed. As compare to a normal distribution, less values were shifted towards the sample mean. The distribution was symmetrical, with very tails.
+
+
+# Introduction
+
+Mark One Lifestyle has a StellarNet spectrometer.  The purpose of this study was to examine the variation within a trial (128 scans) at each wavelength.
+
+# Methods
+
+The data was collected under section 3.5.1 of the Wavelength Selection DOE.
+
+The setup used in the data collection was the red golden setup. The red golden setup consisted of a light source (Ocean Optics DH-2000; serial number 005400821), an optical fiber (Thorlabs; M200L02S-UV), an optical switch (Ocean Optics; INLINE-TTLS), a custom bifuricated fiber optic reflection probe (Thorlabs; 6 fibers from the light source and 1 fiber to the spectrometer; the length from the light source to the cuvette or the spectrometer to the cuvette is 1 m each; the fiber used in this reflectance probe is a Thorlabs FG550UEC), a custom refurbished cuvette holder (Mark One Lifestyle Inc.), a quartz glass cuvette (Thorlabs; CV10Q3500F) with a custom aluminum mirrored surface, and a spectrometer (StellarNet; Silver Nova model, serial number 15040704). The light source was connected to the optical switch by M200L02S-UV fiber. The optical switch was connected to the right side of cuvette holder by FG550UEC probe, and the left side of cuvette holder was connected to the spectrometer by the same probe. The spectrometer was placed in an environmental chamber (Espec BTL-433) at a temperature of 15 C and 70% relative humidity. The spectrometer responded to a wavelength range from `r round(min(as295$wavelength),digits=2)` nm to `r round(max(as295$wavelength),digits=2)` nm. A linear silicon CCD array detector was able to distinguish between `r length(unique(as295$wavelength))` wavelengths.
+
+
+## Data Collection
+
+The data was collected under section 3.5.1 of the Wavelength Selection DOE.  In summary, a single operator inserted an empty cuvette into the setup, took a trial of 128 scans. 
+
+The cuvette was cleaned by rinsing it three times with distilled water using a squirt bottle.  Then it is rinsed once with isopropyl alcohol (IPA) and blown dry with pressurized air.  After this initial cleaning, the cuvette was not cleaned again. The clean and empty cuvette was placed in the holder and clamped into position.  The mirrored surface was contralateral to the fibre cable.  A series of 128 scans, a trial, was collected and stored.  
+
+The operator was Ehson.
+
+## Data Analysis
+
+The data was converted from XML format into tidy formatted comma separated values and all trials were concatenated together and compressed.  This was done using a custom bash script that calls gsxmltidy.py and the output is concatenated.  This output is then compressed using gzip. These compress files were read into `r R.Version()$version.string`.  Within R a four stage cleaning process was performed. All stages are optional and can be performed in any order.  They include a conversion phase where the data is converted into the correct data type.  This phase is often performed, in part, during the read operation.  The transform phase is used to manipulate the values of the data and correct any errors.  During the filtering phase, unneeded or erroneous data is removed from the data set.  In the final phase the data is transformed into tidy format, if required.
+
+After the cleaning process, the data is run through a series of checks.  These checks are independent of the cleaning phase and they test the quality of the data and assumptions that are being made.  These would include, but not limited to, checks to see if the data is the correct data type, if there are missing values, the correct number of levels exist in a factor, values are in range and to make sure that all data is present.
+
+The light source produces several very large spikes in the spectrometer data.  This causes saturation in some wavelengths and bleed over into the adjacent wavelengths.  Therefore, if the sample data was clipped, sample measures greater than `r as.character(FILTER.MAX.REFLECTANCE)`,  in any trial it was removed for all trials collected by a given operator.  To remove the bleed over, wavelengths that were +/- `r FILTER.WAVELENGTH.WIDTH` nm an either side were also removed.
+
+# Results
+
+The operator performed a single trial, and each trial consisted of 128 scans.    All scans for a setup were combined and the mean, per wavelength, was plotted.  The thickness of the line, at each wavelength, was plus or minus one standard deviation.  
+
+## Variance Between Wavelengths
+
+A general assumption in statistical modelling is that the measured value (Y) is the sum of the signal (X) and the error (e).  X, the sample, would be a function of the wavelength, X(lambda).  The error,e, would not be a function of X or lambda and is completely random with a zero mean.  That is, if the error is assumed to be independent of the wavelength or any other measurable factor.  Figures 1 and 2 are a scatter plots of the deviance that each trial has from the mean value within a wavelength. The black line at Deviance=0 represents the mean measured value within a wavelength.  Each blue dot represents the amount that a measure value deviated from the sample mean. The area near 680 nm, that lacks observations, are the result of removing data because the signal exceeded the dynamic range of the spectrometer.  The darker the blue areas, means that more points are sitting on top of each other.  This is most notable at near either end of the spectrum for both spectrometers.
+
+The green lines in represent the 25th and 75th quantile.  The line has been smoothed across wavelengths using a General Additive Model (GAM).  The yellow line represents the 2.5th and 97.5th quantile with the same type of smoothing. If the variance was truly random and therefore independent of the wavelength, this would be a straight line that is parallel to the black line.  This is evidence that variation within each wavelength is a function of the wavelength itself.
+
+```{r red.plot, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, fig.height=6, fig.width=7, fig.cap="Figure 1:"}
+red <- as295
+red <- ddply(red, .(wavelength), transform, reading.centred = scale(reading, scale=FALSE, center=TRUE))
+red.quant <- ddply(red, .(wavelength), summarize, 
+                   quant025=quantile(reading.centred, probs = c(0.025)), 
+                   quant25=quantile(reading.centred, probs=c(0.25)))
+
+red.describe <-psych::describe(red$reading.centred)
+
+red.plot <-  ggplot(red, aes(x=wavelength, y=reading.centred)) + theme_classic() + 
+  geom_point(alpha=0.05, size=0.5, colour="red") +
+  geom_smooth(data = red.quant, aes(x=wavelength, y=quant025), color="yellow") +
+  geom_smooth(data = red.quant, aes(x=wavelength, y=-quant025), color="yellow") +
+  geom_smooth(data = red.quant, aes(x=wavelength, y=-quant25), color="green") +
+  geom_smooth(data = red.quant, aes(x=wavelength, y=quant25), color="green") +
+  geom_hline(yintercept = 0, color="black") +
+  ggtitle("Scan-to-Scan Variance by Wavelength") + 
+  labs(y=expression(Deviance(lambda)==S[i](lambda) - bar(S)(lambda)), x=expression(Wavelength~-~lambda~(nm))) +
+  annotate("text", x=250, y=700, hjust=0, vjust=0, parse=FALSE, label="Overall Deviance:", size=4) +
+  annotate("text", x=250, y=650, hjust=0, vjust=0, parse=FALSE, label=paste0("Range: ", round(red.describe$min), " to ", round(red.describe$max)), size=4) +
+  annotate("text", x=250, y=600, hjust=0, vjust=0, parse=FALSE, label=paste0("Mean: ", round(mean(abs(red$reading.centred)))), size=4) +
+  annotate("text", x=250, y=550, hjust=0, vjust=0, parse=FALSE, label=paste0("Std: ", round(red.describe$sd)), size=4) +
+  scale_x_continuous(breaks=seq(floor(min(red$wavelength)/100)*100, ceiling(max(red$wavelength)/100)*100,100)) +
+  coord_cartesian(xlim = c(min(red$wavelength),  max(red$wavelength))) +
+  scale_y_continuous(breaks=seq(floor(min(red$reading.centred)/100)*100, ceiling(max(red$reading.centred)/100)*100,100)) 
+
+red.plot
+```    
+
+``` {r echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+png(filename=paste(path.figures.final, 'figure1.png', sep='/'), bg="transparent", width=1000, height=750, units="px")
+red.plot
+dev.off()
+```
+
+**Figure 1**: Scatter plot of the variation of observed measurements with respect the the mean sample within each wavelength.  The black line represents the mean deviance.  The green lines are the 25th and 75th quantile values that have been smoothed across wavelengths.  The yellow line is the 2.5th and 97.5th percentile with the same smoothing.  The error is not independent of the wavelength.
+
+For The absolute mean deviance across all wavelengths was `r  round(mean(abs(red$reading.centred)))` counts for spectrometer. The standard deviation was `r round(as344.describe$sd)`.  The observed range for spectrometer was `r round(red.describe$min)`  to `r round(red.describe$max)`. 
+
+For the spectrometer, the observed range was well outside the three standard deviations.  However, there is very little skew (`r round(red.describe$skew,2)`), and the distribution is not concentrated around the mean (kurtosis=`r round(red.describe$kurtosis,2)`).  This means that the data is not normally distributed but it is symmetric, with long tails.
+
+
+Figures 1 demonstrated that the variance near extremes of the examined wavelengths was the smallest.  It was hypothesized that the error in the signal may have been related to the magnitude of the sample measured.  An examination of Figure 2 showed that the smallest signal in sample was near the extremes in the examined wavelengths; the same regions that demonstrated the smallest variance in the deviation measurement. The sharp signal drops in the extremes (wavelength below 200 nm or above 1100 nm) were due to the temperature compensation feature of Silver Nova spectrometer.
+
+```{r red.mean.plot, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, fig.height=4, fig.width=7, fig.cap="Figure 3:"}
+red.mean <- ddply(red, .(wavelength), summarize, reading = mean(reading))
+
+red.mean.plot <-  ggplot(red.mean, aes(x=wavelength, y=reading)) + theme_classic() + 
+  geom_line(colour="red") +
+  ggtitle("Mean Measurement by Wavelength") + 
+  labs(y=expression(Mean~~Measurement==bar(S)(lambda)), x=expression(Wavelength~-~lambda~(nm))) +
+  scale_x_continuous(breaks=seq(floor(min(red.mean$wavelength)/100)*100, ceiling(max(red.mean$wavelength)/100)*100,100)) +
+  coord_cartesian(xlim = c(min(red.mean$wavelength),  max(red.mean$wavelength))) +
+  scale_y_continuous(breaks=seq(0, ceiling(max(red.mean$reading)/100)*100,5000)) 
+
+red.mean.plot
+```
+``` {r echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+png(paste(path.figures.final, 'figure3.png', sep='/'), bg="transparent", width=1000, height=750, units="px")
+red.mean.plot
+dev.off()
+```
+
+**Figure 2**: Mean measurement for each wavelength.  The smallest mean measurements happened in the same regions where the smallest deviance was observed.
+
+To explore the observation that the variance changes as a function of wavelength, the coefficient of variation (CV) was computed and shown in Figures 3. It was noticed that due to low signals at extreme sides of the spectrum, very high values of CV were calculated for wavelengths below 250 nm or above 1100 nm.  In Figure 3, the CV values for wavelength 250-1100 nm are shown.
+
+```{r red.cv.plot, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, fig.height=4, fig.width=7, fig.cap="Figure 5:"}
+red.cv <- ddply(red, .(wavelength), summarize, mean = mean(reading), sd=sd(reading))
+red.cv$cv <- red.cv$sd / red.cv$mean * 100
+
+red.cv.plot <-  ggplot(red.cv, aes(x=wavelength, y=cv)) + theme_classic() + 
+  geom_line(colour="red") +
+  ggtitle("Coefficient of Variation by Wavelength") + 
+  labs(y=expression(Coefficient~~of~~Variation==frac(sigma(lambda),bar(S)(lambda))*100~'%'), x=expression(Wavelength~-~lambda~(nm))) +
+  scale_x_continuous(breaks=seq(floor(min(red.cv$wavelength)/100)*100, ceiling(max(red.cv$wavelength)/100)*100,100)) +
+  coord_cartesian(xlim = c(250, 1100),ylim=c(0,5)) + scale_y_continuous(breaks=seq(0, 5,1)) 
+
+red.cv.plot
+```
+``` {r echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+png(paste(path.figures.final, 'figure5.png', sep='/'), bg="transparent", width=1000, height=750, units="px")
+red.cv.plot
+dev.off()
+```
+
+**Figure 3**: The Coefficient of Variation shows that the normalized variance is highest when the signal is low.  It also shown that the variance is proportional to the measurement once it reaches a certain threshold.  This is seen by the nearly horizontal line through the mid-ranges of the wavelengths.
+
+Figures 2 demonstrated that the variance is related the the measured sample.  If the variance was constant, then the Coefficient of Variation should vary with the mean value.  That is, if there was no relationship between variance within a wavelength and the mean measurement than Figures 3 was a scaled version of Figures 2.  However, this was not the case.  Figures 3 demonstrated that when the mean measurement was low, at the two extremes of the examined wavelengths, then the Coefficient of Variation was relatively high (max 4-5%).  In the midsection of the wavelength spectrum, the Coefficient of Variation is around 0.5-1%.  That suggests that the variance in the signal is proportional to the measured sample.
+
+This difference may be due to the "dark" noise dominating the low amplitude signal. The increased variance when the signal is larger, may be due to an amplification of the noise as the true signal increases.
+
+# Conclusion
+
+This study has shown that the variance is a function of the amplitude of the measured sample and also the wavelength.  The dependence on the wavelength may be a function of the "dark" noise.  The distribution of the variance between is not normal.  However, it is symmetrically distributed with a lower number of samples closer to the expected value than in a normal distribution.  This suggests that repeated measures would produce consistent sample means as the spectrometers has high precision. The observed long-tails of distribution suggests that individual scans may produce inaccurate results.

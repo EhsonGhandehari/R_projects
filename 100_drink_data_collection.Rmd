@@ -1,0 +1,288 @@
+
+---
+title: "100 Drink Data Collection"
+output:
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(cache=TRUE)
+```
+
+```{r LoadData, echo=FALSE}
+host.name <- system("hostname", intern=TRUE)
+if (identical(host.name, "mab")) {
+  setwd("~/git/algorithms/analysis/R/final")
+} 
+
+if (identical(host.name, "Ehson-Ghandehari-Macbook-Pro.local")) {
+  setwd("/Users/ehson/Documents/git/algorithms/analysis/R/final")
+} 
+
+suppressWarnings(source("constant.R"))
+
+suppressWarnings(source(paste(path.R.final, "library.R", sep='/')))
+suppressWarnings(source(paste(path.R.final, "data.read.R", sep='/')))
+suppressWarnings(source(paste(path.R.final, "data.clean.R", sep='/')))
+suppressWarnings(source(paste(path.R.final, "data.check.R", sep='/')))
+
+```
+
+
+
+
+**Data Collection**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+
+* Date: 2015-06-01 to 2015-06-11
+* Tickets: AS-337
+* Git Repo: data.mkone.co/var/git/science/vessyl/as-337.git 
+* Git Branch: master
+
+**Analysis**
+
+* Ticket: VA-128
+* Git Repo: git.mkone.co:vessyl-algorithms/algorithms.git
+* Git Branch: va-128
+
+# Table of Contents
+
+# Revision Control
+
+# Executive Summary
+
+# Introduction
+
+The main purpose of beverage data collection is to create a breadth of data, which provides sufficient information for LED selection for Engineering Validation Testing (EVT). A list of 500 (actual of 604 drinks) drinks was prepared for wavelength selection purpose. However, as an initial step in data collection, a list of 100-drink (a subset of 500-drink list) was selected and tested. The 100-drink list consists a representation of all pre-defined beverage categories (e.g. sports drinks, coffee, protein shakes). The purpose was to ensure that our custom setup gave highly reliable data across a midsize cross-section of drinks. 
+
+
+# Methods
+
+Each liquid measurement consists of three trials (128 scans): 1) dark, 2) white, and 3) drink measurements. The inline-shutter was closed for dark measurements. The white measurement was the spectroscopic response of an empty, clean, and dry cuvette. The cuvette was cleaned by rinsing it three times with distilled water using a squirt bottle. The mirrored surface was contralateral to the fibre cable. Then it was rinsed once with isopropyl alcohol (IPA) and blown dried with pressurized air. The drink measurment is the spectroscopic reponse of the cuvette filled with the liquid.  It should be noted that to reduce or eliminate the cuvette replacement error, the liquid was pured into the cuvette without replacing the cuvette. 
+
+According to previous studies **VA-94**, multiple integration time is advantages for analysis  by partitioning the spectra into three (UV, VIS, and NIR regions) or more regions. For analysis, at least one integration time must produce a spectrum with no saturation (except the expected spike caused by Deuterium light at 645 nm). After using Deionized (DI) water, as a representator of transparent liquids, and heavy wipping cream, as a representator of fatty, light absorbing liquid, it was discovered that IT of 30 ms produces a non-clipping signal all along the wavelengths. Therefore, it was decided to use three integration times of 30, 150, and 300 ms for transparent drinks, whike using 30,150,300, and 600 ms for opaque drinks such as coffee, wine.    
+ 
+## Setup
+
+The setup used in the data collection was the red golden setup. The red golden setup consisted of a light source (Ocean Optics DH-2000; serial number 005400821), an optical fibre (Thorlabs; TP00932D05), an optical switch (Ocean Optics; INLINE-TTLS), a custom bifuricated fibre optic reflection probe (Thorlabs: RP20-Custom
+TP00994323; 6 fibres from the light source and 1 fibre to the spectrometer; the length from the light source to the cuvette or the spectrometer to the cuvette is 1 m each; the fibre used in this reflectance probe is a Thorlabs FG550UEC), a custom refurbished cuvette holder (Mark One Lifestyle Inc.), a quartz glass cuvette (Thorlabs; CV10Q3500F) with a custom aluminum mirrored surface, and a spectrometer (StellarNet; Silver Nova model, serial number 15040704). The light source was connected to the optical switch by a TP00932D05 fibre.  The optical switch was connected to the front side of the cuvette holder by one leg (containing 6 fibre) of the reflection probe, and the the other leg (containing 1 fibre) was connected to the spectrometer. The spectrometer was placed in an environmental chamber (Espec BTL-433) at a temperature of 15 C and 70% relative humidity. The spectrometer responded to a wavelength range from `r round(min(as337$wavelength),digits=2)` nm to `r round(max(as337$wavelength),digits=2)` nm with 3684 individual wavelengths. The GSCT software was build number 1.0.5532.17394. The computer running the tool was a Dell laptop running Windows 8.
+
+## Data Collection
+
+The data (AS-337) were converted from XML format into tidy formatted comma separated values and all trials were concatenated together and compressed.  This was done using a custom bash script that calls gsxmltidy.py and the output is concatenated.  This output is then compressed using gzip. These compress files were read into `r R.Version()$version.string`.  Within R a four stage cleaning process was performed. All stages are optional and can be performed in any order.  They include a conversion phase where the data is converted into the correct data type.  This phase is often performed, in part, during the read operation.  The transform phase is used to manipulate the values of the data and correct any errors.  During the filtering phase, unneeded or erroneous data is removed from the data set.  In the final phase the data is transformed into tidy format, if required.
+
+After the cleaning process, the data is run through a series of checks.  These checks are independent of the cleaning phase and they test the quality of the data and assumptions that are being made.  These would include, but not limited to, checks to see if the data is the correct data type, if there are missing values, the correct number of levels exist in a factor, values are in range and to make sure that all data is present.
+
+The light source produces several very large spikes in the spectrometer data.  This causes saturation in some wavelengths and bleed over into the adjacent wavelengths.  Therefore, if the reflectance data was clipped, reflectance measures greater than `r as.character(FILTER.MAX.REFLECTANCE)`,  in any trial it was removed for all trials collected by a given operator.  To remove the bleed over, wavelengths that were +/- `r FILTER.WAVELENGTH.WIDTH` nm an either side were also removed.
+
+The GSCT AS-337 data were loaded, cleaned and checked.
+
+## Data Analysis
+
+The data analysis consists of presenting the drink, white, dark, and normalized (i.e. transreflectivity percentage) for at least two trials at all integration times. Also the average transreflectivity of trials (along all wavelengths) was compared.  The **Pass** criteria was that out of three trials, two of the trials must be withing 0.5% of minimum average transreflectance. In case of **Fail**, the acceptable percentage value is calculted and reported in CSV file.
+
+
+
+# Results
+
+In the following pages, the data is presented in three sections: 1) Drink, 2) White, and 3) Dark measurements.  The drinks are presented alphabetically based on drink category.  The summary of data was provided as a CSV file. 
+
+**Alcohol**
+
+**Beer**
+
+**Coffee**
+
+** Energy**
+
+**Juice**
+
+**Milk**
+
+** Other**
+
+**Soda**
+
+**Sport**
+
+**Tea**
+
+**Water**
+
+**Wine**
+
+
+```{r normalized_and_rawdrink , echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, fig.height=4, fig.width=7}
+
+# checking the number of unique drinks.
+# as337<-gsub("012000286209\177","012000286209",as337)
+number_drinks<-length(unique(as337$upc))
+ID<-unique(as337$upc)
+
+
+# This analysis if designed for 100 drinks.
+# In case the ID number is more than 100 drink, there might be a wrong scan in the drinks.
+# getting the integration time
+
+# subsetting based on ID name 
+
+
+report<-data.frame(drink_name=c("a","b"),number_trials=1:2,number_IT=1:2, clipping_pecent=1:2,reflectivity_mean1=1:2,reflectivity_mean2=1:2,reflectivtiy_mean3=1:2,reflectivity_check=c("p","d"),percent_to_pass=1:2)
+
+write.csv(report,"/Users/ehson/Documents/git/algorithms/analysis/text/report/report.csv")
+
+
+for (i in 2:102) {
+  drink<-subset(as337,upc==ID[50] | upc==ID[85]) 
+  number_integration<-length(unique(drink$integration.time))
+  
+  # fixing the name for saving the pictures
+  correctname<-as.character(drink$name[1])
+  modifiedname<-tolower(correctname)
+  modifiedname<-gsub("%","percent",modifiedname)
+  modifiedname<-gsub(" ","_",modifiedname)
+ 
+ 
+
+  # normalization graphing is done only on 30 ms integration time.
+  drink30<-subset(drink,integration.time==30000)
+  drinkaverage30<-ddply(drink30,.(drink.id,wavelength),summarize,mwhite=mean(white),mdark=mean(dark))
+  drink30<-join(drink30,drinkaverage30)
+  drink30$reflectivity=((drink30$reading-drink30$mdark)/(drink30$mwhite-drink30$mdark))*100
+  
+  # reporting in a CSV file.
+  
+  number_trial<-length(unique(drink30$drink.id))
+  clipping_percentage=round(((1-(length(unique(drink30$wavelength))/3684))*100),2)
+  meancomparison_trials<-ddply(subset(drink30, wavelength>=250 & wavelength<=950),.(drink.id),summarize,mreflectivity=mean(reflectivity))
+  min_reflectivity<-min(meancomparison_trials$mreflectivity)
+  max_reflectivity<-max(meancomparison_trials$mreflectivity)
+  percent_to_pass<-round(((max_reflectivity-min_reflectivity)/min_reflectivity),2)
+
+  # checking success of reading signals
+  a<-0
+
+  reflectivity_check<-"reflectivity_check"
+  
+  for (j in 1:number_trial) {
+  if (meancomparison_trials$mreflectivity[j]<=min_reflectivity+0.01*min_reflectivity) a<-a+1    
+  }
+ 
+  if (a==number_trial) reflectivity_check<-"pass" else reflectivity_check<-"fail"
+
+  
+writeincsv(correctname,number_trial,number_integration,clipping_percentage,round(meancomparison_trials$mreflectivity[1],2),round(meancomparison_trials$mreflectivity[2],2),round(meancomparison_trials$mreflectivity[3],2),reflectivity_check,percent_to_pass)
+    
+  
+  
+  # creating the drink response figures
+  
+  figure1<-ggplot(subset(drink,integration.time==30000),aes(x=wavelength,y=reading,colour=drink.id))+geom_point(alpha=0.5,size=0.5)+theme_classic()+ggtitle(paste("Drink:",correctname,"\nIntegration Time:30 ms",sep=""))+labs(y="Intensities (counts)", x="Wavelength (nm)")+scale_color_discrete(name ="Number of Trials", labels=c("1","2","3","4"))+theme(legend.position="none")+scale_x_continuous(breaks=seq(200,1050,100)) + scale_y_continuous(breaks=seq(0,65700,5000),limits=c(0,65700))
+  
+  
+  white1<-ggplot(subset(drink,integration.time==30000),aes(x=wavelength,y=white,colour=drink.id))+geom_point(alpha=0.02,size=0.5)+theme_classic()+ggtitle(paste("White:",correctname,"\nIntegration Time:30 ms",sep=""))+labs(y="Intensities (counts)", x="Wavelength (nm)")+scale_color_discrete(name ="Number of Trials", labels=c("1","2","3","4"))+theme(legend.position="none")+scale_x_continuous(breaks=seq(200,1050,100)) + scale_y_continuous(breaks=seq(0,65700,5000),limits=c(0,65700))
+  
+  dark1<-ggplot(subset(drink,integration.time==30000),aes(x=wavelength,y=dark,colour=drink.id))+geom_point(alpha=0.02,size=0.5)+theme_classic()+ggtitle(paste("Dark:",correctname,"\nIntegration Time:30 ms",sep=""))+labs(y="Intensities (counts)", x="Wavelength (nm)")+scale_color_discrete(name ="Number of Trials", labels=c("1","2","3","4"))+theme(legend.position="none")
+  
+normal30<-ggplot(drink30,aes(x=wavelength,y=reflectivity,colour=drink.id))+geom_point(size=0.5,alpha=0.01)+theme_classic()+ggtitle(paste("Normalized: ",correctname,",   IT:30 ms",sep=""))+labs(y="Reflectivity (%)", x="Wavelength (nm)")+scale_x_continuous(breaks=seq(250,1100,100),limits=c(250, 1100))+scale_y_continuous(limits=c(0,200))+geom_hline(yintercept=100,colour="black")+scale_color_discrete(name ="Trial", labels=c("1","2","3","4"))+guides(colour = guide_legend(override.aes = list(size=1.5, alpha=1)))
+  
+png(paste(path.figures.final, '/normalized/',modifiedname,'_normalized.png', sep=""), bg="transparent", width=1000, height=750, units="px")
+print(normal30)
+dev.off() 
+  
+  figure2<-ggplot(subset(drink,integration.time==150000),aes(x=wavelength,y=reading,colour=drink.id))+geom_point(size=0.5, alpha=0.02)+theme_classic()+ggtitle(paste("Drink:",correctname,"\nIntegration Time:150 ms",sep=""))+labs(y="Intensities (counts)", x="Wavelength (nm)")+scale_color_discrete(name ="Number of Trials", labels=c("1","2","3","4"))+theme(legend.position="none")+scale_x_continuous(breaks=seq(200,1050,100)) + scale_y_continuous(breaks=seq(0,65700,5000),limits=c(0,65700))
+  
+white2<-ggplot(subset(drink,integration.time==150000),aes(x=wavelength,y=white,colour=drink.id))+geom_point(size=0.5, alpha=0.02)+theme_classic()+ggtitle(paste("White:",correctname,"\nIntegration Time:150 ms",sep=""))+labs(y="Intensities (counts)", x="Wavelength (nm)")+scale_color_discrete(name ="Number of Trials", labels=c("1","2","3","4"))+theme(legend.position="none")+scale_x_continuous(breaks=seq(200,1050,100)) + scale_y_continuous(breaks=seq(0,65700,5000),limits=c(0,65700))
+
+dark2<-ggplot(subset(drink,integration.time==150000),aes(x=wavelength,y=dark,colour=drink.id))+geom_point(size=0.5, alpha=0.02)+theme_classic()+ggtitle(paste("Dark:",correctname,"\nIntegration Time:150 ms",sep=""))+labs(y="Intensities (counts)", x="Wavelength (nm)")+scale_color_discrete(name ="Number of Trials", labels=c("1","2","3","4"))+theme(legend.position="none")
+
+
+  
+  if (number_integration==4) {
+ 
+  figure3<-ggplot(subset(drink,integration.time==300000),aes(x=wavelength,y=reading,colour=drink.id))+geom_point(size=0.5, alpha=0.02)+theme_classic()+ggtitle(paste("Drink:",correctname,"\nIntegration Time:300 ms",sep=""))+labs(y="Intensities (counts)", x="Wavelength (nm)")+scale_color_discrete(name ="Number of Trials", labels=c("1","2","3","4"))+ theme(legend.position="none")+scale_x_continuous(breaks=seq(200,1050,100)) + scale_y_continuous(breaks=seq(0,65700,5000),limits=c(0,65700))
+
+ white3<-ggplot(subset(drink,integration.time==300000),aes(x=wavelength,y=white,colour=drink.id))+geom_point(size=0.5, alpha=0.02)+theme_classic()+ggtitle(paste("White:",correctname,"\nIntegration Time:300 ms",sep=""))+labs(y="Intensities (counts)", x="Wavelength (nm)")+scale_color_discrete(name ="Number of Trials", labels=c("1","2","3","4"))+ theme(legend.position="none")+scale_x_continuous(breaks=seq(200,1050,100)) + scale_y_continuous(breaks=seq(0,65700,5000),limits=c(0,65700))
+  
+  
+ dark3<-ggplot(subset(drink,integration.time==300000),aes(x=wavelength,y=dark,colour=drink.id))+geom_point(size=0.5, alpha=0.02)+theme_classic()+ggtitle(paste("Dark:",correctname,"\nIntegration Time:30 ms",sep=""))+labs(y="Intensities (counts)", x="Wavelength (nm)")+scale_color_discrete(name ="Number of Trials", labels=c("1","2","3","4"))+ theme(legend.position="none")
+ 
+  figure4<-ggplot(subset(drink,integration.time==600000),aes(x=wavelength,y=reading,colour=drink.id))+geom_point(size=0.5, alpha=0.02)+theme_classic()+ggtitle(paste("Drink:",correctname,"\nIntegration Time:600 ms",sep=""))+labs(y="Intensities (counts)", x="Wavelength (nm)")+scale_color_discrete(name ="Number of Trials", labels=c("1","2","3","4"))+ guides(colour = guide_legend(override.aes = list(size=1.5, alpha=1)))+scale_x_continuous(breaks=seq(200,1050,100)) + scale_y_continuous(breaks=seq(0,65700,5000),limits=c(0,65700))
+ 
+ 
+ white4<-ggplot(subset(drink,integration.time==600000),aes(x=wavelength,y=white,colour=drink.id))+geom_point(size=0.5, alpha=0.02)+theme_classic()+ggtitle(paste("White:",correctname,"\nIntegration Time:30 ms",sep=""))+labs(y="Intensities (counts)", x="Wavelength (nm)")+scale_color_discrete(name ="Number of Trials", labels=c("1","2","3","4"))+ guides(colour = guide_legend(override.aes = list(size=1.5, alpha=1)))+scale_x_continuous(breaks=seq(200,1050,100)) + scale_y_continuous(breaks=seq(0,65700,5000),limits=c(0,65700))
+  
+dark4<-ggplot(subset(drink,integration.time==600000),aes(x=wavelength,y=dark,colour=drink.id))+geom_point(size=0.5, alpha=0.02)+theme_classic()+ggtitle(paste("Dark:",correctname,"\nIntegration Time:30 ms",sep=""))+labs(y="Intensities (counts)", x="Wavelength (nm)")+scale_color_discrete(name ="Number of Trials", labels=c("1","2","3","4"))+ guides(colour = guide_legend(override.aes = list(size=1.5, alpha=1)))   
+
+
+  # this first prints it into the Mardown
+  #multiplot(figure1,figure2,figure3,figure4, cols=2) 
+  # this saves it as a files.
+  
+png(paste(path.figures.final, '/drink/',modifiedname,'_drink.png', sep=""), bg="transparent", width=1000, height=750, units="px")
+multiplot(figure1,figure2,figure3,figure4,cols=2)
+dev.off()
+
+
+png(paste(path.figures.final, '/white/',modifiedname,'_white.png', sep=""), bg="transparent", width=1000, height=750, units="px")
+multiplot(white1,white2,white3,white4,cols=2)
+dev.off()
+
+png(paste(path.figures.final, '/dark/',modifiedname,'_dark.png', sep=""), bg="transparent", width=1000, height=750, units="px")
+multiplot(dark1,dark2,dark3,dark4,cols=2)
+dev.off()
+
+
+  }
+  
+  if (number_integration==3) {
+    
+    figure3<-ggplot(subset(drink,integration.time==300000),aes(x=wavelength,y=reading,colour=drink.id))+geom_point(size=0.5, alpha=0.02)+theme_classic()+ggtitle(paste("Drink:",correctname,"\nIntegration Time:300 ms",sep=""))+labs(y="Intensities", x="Wavelength (nm)")+scale_color_discrete(name ="Number of Trials", labels=c("1","2","3","4"))+ guides(colour = guide_legend(override.aes = list(size=1.5, alpha=1)))+scale_x_continuous(breaks=seq(200,1050,100)) + scale_y_continuous(breaks=seq(0,65700,5000),limits=c(0,65700))
+
+    
+  white3<-ggplot(subset(drink,integration.time==300000),aes(x=wavelength,y=white,colour=drink.id))+geom_point(size=0.5, alpha=0.02)+theme_classic()+ggtitle(paste("White:",correctname,"\nIntegration Time:300 ms",sep=""))+labs(y="Intensities", x="Wavelength (nm)")+scale_color_discrete(name ="Number of Trials", labels=c("1","2","3","4"))+ guides(colour = guide_legend(override.aes = list(size=1.5, alpha=1)))+scale_x_continuous(breaks=seq(200,1050,100)) + scale_y_continuous(breaks=seq(0,65700,5000),limits=c(0,65700))
+  
+  
+ dark3<-ggplot(subset(drink,integration.time==300000),aes(x=wavelength,y=dark,colour=drink.id))+geom_point(size=0.5, alpha=0.02)+theme_classic()+ggtitle(paste("Dark:",correctname,"\nIntegration Time:300 ms",sep=""))+labs(y="Intensities", x="Wavelength (nm)")+scale_color_discrete(name ="Number of Trials", labels=c("1","2","3","4"))+ guides(colour = guide_legend(override.aes = list(size=1.5, alpha=1)))
+    
+  # this first prints it into the Mardown
+  #multiplot(figure1,figure2,figure3, cols=2) 
+  # this saves it as a files.
+ 
+png(paste(path.figures.final, '/drink/',modifiedname,'_drink.png', sep=""), bg="transparent", width=1000, height=750, units="px")
+multiplot(figure1,figure2,figure3,cols=2)
+dev.off()  
+    
+png(paste(path.figures.final, '/white/',modifiedname,'_white.png', sep=""), bg="transparent", width=1000, height=750, units="px")
+multiplot(white1,white2,white3,cols=2)
+dev.off() 
+
+png(paste(path.figures.final, '/dark/',modifiedname,'_dark.png', sep=""), bg="transparent", width=1000, height=750, units="px")
+multiplot(dark1,dark2,dark3,cols=2)
+dev.off() 
+  }
+
+  #normal30  
+
+}
+
+
+# this is just for normalized data
+
+
+
+
+
+```
+
+
+
+
+# Conclusion
+
+
+
+
+# Appendix A
+
+
+

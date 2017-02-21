@@ -1,0 +1,170 @@
+
+---
+title: "Operator to Operator Variation for the Ocean Optics Spectrometer"
+output:
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(cache=TRUE)
+```
+
+```{r LoadData, echo=FALSE}
+host.name <- system("hostname", intern=TRUE)
+if (identical(host.name, "mab")) {
+  setwd("~/git/algorithms/analysis/R/final")
+} 
+
+if (identical(host.name, "Ehson-Ghandehari-Macbook-Pro.local")) {
+  setwd("/Users/ehson/Documents/git/algorithms/analysis/R/final")
+} 
+
+suppressWarnings(source("constant.R"))
+
+suppressWarnings(source(paste(path.R.final, "library.R", sep='/')))
+suppressWarnings(source(paste(path.R.final, "data.read.R", sep='/')))
+suppressWarnings(source(paste(path.R.final, "data.clean.R", sep='/')))
+suppressWarnings(source(paste(path.R.final, "data.check.R", sep='/')))
+
+```
+
+**Data Collection**
+
+* Date: 2015-04-22
+* Tickets: AS-293 and AS-303
+* Git Repo: data.mkone.co/var/git/science/vessyl/as-293.git; data.mkone.co/var/git/science/vessyl/as-303.git 
+* Git Branch: master
+
+**Analysis**
+
+* Ticket: VA-111
+* Git Repo: git.mkone.co:vessyl-algorithms/algorithms.git
+* Git Branch: va-111
+
+# Table of Contents
+
+# Revision Control
+
+
+# Executive Summary
+
+* 4-5% normalized reflectance differnce was observed from operator to operator.
+* According to VA-92, the maximum cuvette replacement error was reported to be 4%.
+* Operator-to-operator difference contributed 1% to the total error margin.
+
+# Introduction
+
+Mark One Lifestyle has a StellarNet Silver Nova spectrometer.  The goal of this study was to determine if the operator had a notable effect on the measurement of a spectrum.  
+
+# Methods
+
+The data was collected under section 3.5.3 of the Wavelength Selection DOE. In short, two operators (Ehson and Nikita) separately conducted cuvette replacement test (**VA-92**).  
+
+## Setup
+
+The setup used in the data collection was the red golden setup. The red golden setup consisted of a light source (Ocean Optics DH-2000; serial number 005400821), an optical fibre (Thorlabs; M200L02S-UV), an optical switch (Ocean Optics; INLINE-TTLS), a custom bifuricated fibre optic reflection probe (Thorlabs; 6 fibres from the light source and 1 fibre to the spectrometer; the length from the light source to the cuvette or the spectrometer to the cuvette is 1 m each; the fibre used in this reflectance probe is a Thorlabs FG550UEC), a custom refurbished cuvette holder (Mark One Lifestyle Inc.), a quartz glass cuvette (Thorlabs; CV10Q3500F) with a custom aluminum mirrored surface, and a spectrometer (StellarNet; Silver Nova model, serial number 15040704). The light source was connected to the optical switch by a M200L02S-UV fibre.  The optical switch was connected to the front side of the cuvette holder by one leg (containing 6 fibre) of the reflection probe, and the the other leg (containing 1 fibre) was connected to the spectrometer. The spectrometer was placed in an environmental chamber (Espec BTL-433) at a temperature of 15 C and 70% relative humidity. The spectrometer responded to a wavelength range from `r round(min(va111$wavelength),digits=2)` nm to `r round(max(va111$wavelength),digits=2)` nm with 2051 individual wavelengths. The GSCT software was build number 1.1.5589.42971. The computer running the tool was a Dell laptop running Windows 8.
+
+## Data Collection
+
+The data was collected under AS-303 (Nikita) and AS-293 (Ehson). The data was collected using a clean, dry cuvette. The cuvette was cleaned by rinsing it three times with distilled water using a squirt bottle.  Then it was rinsed once with isopropyl alcohol (IPA) and blown dried with pressurized air.  The clean and empty cuvette was placed in the holder and clamped into position.  The mirrored surface was contralateral to the fibre cable. Using the GSCT, ten trials (each containing 128 scans), was collected and stored. 
+
+## Data Analysis
+
+The data (AS-303 and AS-293) were converted from XML format into tidy formatted comma separated values and all trials were concatenated together and compressed.  This was done using a custom bash script that calls gsxmltidy.py and the output is concatenated.  This output is then compressed using gzip. These compress files were read into `r R.Version()$version.string`.  Within R a four stage cleaning process was performed. All stages are optional and can be performed in any order.  They include a conversion phase where the data is converted into the correct data type.  This phase is often performed, in part, during the read operation.  The transform phase is used to manipulate the values of the data and correct any errors.  During the filtering phase, unneeded or erroneous data is removed from the data set.  In the final phase the data is transformed into tidy format, if required.
+
+After the cleaning process, the data is run through a series of checks.  These checks are independent of the cleaning phase and they test the quality of the data and assumptions that are being made.  These would include, but not limited to, checks to see if the data is the correct data type, if there are missing values, the correct number of levels exist in a factor, values are in range and to make sure that all data is present.
+
+The light source produces several very large spikes in the spectrometer data.  This causes saturation in some wavelengths and bleed over into the adjacent wavelengths.  Therefore, if the reflectance data was clipped, reflectance measures greater than `r as.character(FILTER.MAX.REFLECTANCE)`,  in any trial it was removed for all trials collected by a given operator.  To remove the bleed over, wavelengths that were +/- `r FILTER.WAVELENGTH.WIDTH` nm an either side were also removed.
+
+The GSCT AS-293 and AS-303 data were loaded, cleaned and checked.
+
+# Results
+
+Figure 1, shows the mean reflectance collected by each operator on an empty cuvette.  The thickness of each line is one standard deviation on either side of the mean.  A different colour is used for each operator and a qualitative assessment shows that the signal recorded is in general agreement between operators (red is data collected by Ehson, blue is data collected by Nikita, black is the overlap region).  
+
+
+```{r plot.mean , echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, fig.height=4, fig.width=7, fig.cap="Figure 1:"}
+
+# splitting the data between operators
+ehson<-subset(va111,grepl("ehson",va111$name))
+ehson$name<-factor(unique(ehson$name))
+nikia<-subset(va111,name=="nikia6")
+nikia$name<-"nikita6"
+nikita<-subset(va111,grepl(c("nikita"),va111$name))
+nikita<-rbind(nikita,nikia)
+nikita$name<-factor(unique(nikita$name))
+
+ehson.summary <- ddply(ehson, .(wavelength), summarise, reading.mean=mean(reading),white.mean=mean(white),dark.mean=mean(dark),reading.sd=sd(reading))
+ehson.all<-merge(ehson,ehson.summary,by.x="wavelength")
+ehson.all$normal<-(ehson.all$reading-ehson.all$dark.mean)/(ehson.all$white.mean-ehson.all$dark.mean)
+  
+nikita.summary <- ddply(nikita, .(wavelength), summarise, reading.mean=mean(reading),white.mean=mean(white),dark.mean=mean(dark),reading.sd=sd(reading))
+nikita.all<-merge(nikita,nikita.summary,by.x="wavelength")
+nikita.all$normal<-(nikita.all$reading-nikita.all$dark.mean)/(nikita.all$white.mean-nikita.all$dark.mean)
+
+
+operator.variability<-ggplot(ehson.summary, aes(x=wavelength, y=reading.mean)) + theme_classic() + geom_line(aes(colour="Ehson"),alpha=0.5)+ geom_line(data=nikita.summary,aes(x=wavelength,y=reading.mean,colour="Nikita"),aplha=0.5)+labs(y="Mean Reflectance +/- SD", x="Wavelength (nm)") + geom_errorbar(data=ehson.summary,aes(ymin=reading.mean-reading.sd, ymax=reading.mean+reading.sd), width=.1) + geom_errorbar(data=nikita.summary,aes(ymin=reading.mean-reading.sd, ymax=reading.mean+reading.sd), width=.1)+scale_x_continuous(breaks=seq(200,1100,100),limits=c(min(ehson.summary$wavelength), max(ehson.summary$wavelength))) + scale_y_continuous(breaks=seq(0,max(ehson.summary$reading.mean),5000),limits=c(0, max(ehson.summary$reading.mean))) + coord_cartesian(xlim = c(250, 1100))+scale_color_discrete(name ="Operator")
+
+operator.variability
+```
+**Figure 1**: Reflectance for two separate operators.
+
+``` {r echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+png(paste(path.figures.final, 'figure1.png', sep='/'), bg="transparent", width=1000, height=750, units="px")
+operator.variability
+dev.off()
+```
+
+Figure 2 quantitatively shows the difference between operators. This graph appears to have a dependence on wavelength. The red horizontal line is a reference line, indicating no relfectance difference between operators.  In case of no operator-to-operator difference, the black line must be close to the red line, all along the spectrum. The difference was low from 250-600 nm, but it increased in 600-950 nm range. This can be due to signal amplitude measured in these ranges, as can be seen in Figure 1. The mean reflectance was low in 250-600 nm, increased in 600-950 nm, and then decreased in 950-1100 nm.   
+
+```{r diff.mean , echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, fig.height=4, fig.width=7, fig.cap="Figure 2:"}
+
+means<-data.frame(wavelength=ehson.summary$wavelength,ehson.reading=ehson.summary$reading.mean,nikita.reading=nikita.summary$reading.mean)
+
+ref.diff<-ggplot(means, aes(x=wavelength, y=ehson.reading-nikita.reading)) + theme_classic() + geom_point(size=1,alpha=0.5) +labs(y="Reflectance Difference (counts)", x="Wavelength (nm)") +scale_x_continuous(breaks=seq(250,1100,100),limits=c(250, 1100))+geom_hline(yintercept=0,colour="red")
+
+ref.diff
+```
+**Figure 2**: Reflectance difference between operators.
+
+``` {r echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+png(paste(path.figures.final, 'figure2.png', sep='/'), bg="transparent", width=1000, height=750, units="px")
+ref.diff
+dev.off()
+```
+
+The operator-to-operator variation is the accumulation of three different variations: 1) time drift between measurements, 2) cuvette replacement variation, and 3) the operator performance variation. The time drift might have influenced the white readings for each trial. In order to eliminate the time drift effect, the reflectance measurements at each wavelength, for each operator, were normolized by using Equation 1:
+
+
+
+
+Figure 3 presents differnce of normolized reflectance between operators, at each wavelength. The red horizontal line is a reference line, indicating no difference between operators. There were 2604800 datapoints, presenting the operator differnce, which centered around 0.  This indicated that the  
+
+
+```{r norm.diff , echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, fig.height=4, fig.width=7, fig.cap="Figure 3:"}
+
+diff.norm<-data.frame(wavelength=ehson.all$wavelength,ehson.reading=ehson.all$normal,nikita.reading=nikita.all$normal)
+
+#x<-ddply(ehson,.(name,wavelength),summarize,ereading=reading)
+#y<-ddply(nikita,.(name,wavelength),summarize,nreading=reading)
+#z<-data.frame(wavelength=x$wavelength,ereading=x$ereading,nreading=y$nreading)
+#z$diff<-z$ereading-z$nreading
+#CI95<-ddply(z,.(wavelength),summarize,conf1=(mean(diff)+qnorm(0.975)*(sd(diff)/sqrt(128))))
+
+ref.diff.norm<-ggplot(diff.norm, aes(x=wavelength, y=(ehson.reading-nikita.reading)*100)) + theme_classic() + geom_point(size=0.1,alpha=0.3) +labs(y="Difference of Normalized Reflectance (%)", x="Wavelength (nm)") +scale_x_continuous(breaks=seq(250,1100,100),limits=c(250, 1100))+scale_y_continuous(breaks=seq(-10,10,5),limits=c(-10, 10))+geom_hline(yintercept=0,colour="red")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
+ref.diff.norm
+```
+**Figure 3**: Differnce of Normolized Reflectance between operators over the spectrum.
+
+``` {r echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+png(paste(path.figures.final, 'figure3.png', sep='/'), bg="transparent", width=1000, height=750, units="px")
+ref.diff.norm
+dev.off()
+```
+
+
+
+# Conclusion
+
+A qualitative examination showed that the data is in general agreement between operators.  Quantitatively, the mean reflectance difference was not independent of the wavelength.  The reflectance difference was observed to be low from 250-600 nm, but it increased in 600-950 nm range (as high as 400 counts). After normalizing reflectance measurements, the maximum reflectance difference between operators was measured to be 5%, in the extreme sides of the spectrum. According to VA-92, the maximum error reported for cuvette replacement was 4%.  Therefore, the operator-to-operator difference added maximum of 1% to the error margin.  

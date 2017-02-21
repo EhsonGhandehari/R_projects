@@ -1,0 +1,148 @@
+---
+title: "Cuvette Placement and Replacement for the Ocean Optics Spectrometer Using a Custom Cuvette Holder"
+author: "Version 1.0.0"
+date: "February 23, 2015"
+output:
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(cache=TRUE)
+```
+
+```{r LoadData, echo=FALSE}
+host.name <- system("hostname", intern=TRUE)
+if (identical(host.name, "mab")) {
+  setwd("~/git/algorithms/analysis/R/final")
+} 
+if (identical(host.name, "Ehson-Ghandehari-Macbook-Pro.local")) {
+  setwd("/Users/ehson/Documents/git/algorithms/analysis/R/final")
+}
+suppressWarnings(source("constant.R"))
+suppressWarnings(source(paste(path.R.final, "library.R", sep='/')))
+suppressWarnings(source(paste(path.R.final, "data.read.R", sep='/')))
+suppressWarnings(source(paste(path.R.final, "data.clean.R", sep='/')))
+suppressWarnings(source(paste(path.R.final, "data.check.R", sep='/')))
+
+```
+
+**Data Collection**
+
+* Date: 2015-04-22
+* Tickets: AS-294
+* Git Repo: data.mkone.co/var/git/science/vessyl/as-293.git 
+* Git Branch: master
+
+**Analysis**
+
+* Ticket: VA-91
+* Git Repo: git.mkone.co:vessyl-algorithms/algorithms.git
+* Git Branch: va-91
+
+# Table of Contents
+
+# Revision Control
+|Revision Number|Revision Date|Notes|Owner|
+|1.0.0|2015-02-03|Initial Draft|John Peach|
+
+# Executive Summary
+
+* It was found that the spectrometer is within manufacture's specfication for wavelength accuracy.
+
+# Introduction
+
+Mark One Lifestyle has a StellarNet Silver Nova spectrometer. The purpose of this study is to understand if the spectrometer is within manufacture's specfication for wavelength accuracy. The spectrometer reponse will be compared with the published absorbance spectrum of a standard cuvette (Helma didymium glass filter). The recorded spectrum of the this calibration standard will be checked to match the published spectrum by Helma (attenuation may slightly change the shape of the spectrum, but clear peaks should still be visible and measurable). The precision should be within the limits defined by the Ocean Optics spectrometer-this is a maximum of 2 nm shift (6sigma) at all peaks and it is a property of the hardware. (eventhough an Ocean Optics spectrometer will not be used in this study, this criterion can be a fair point for acceptance/rejection)  
+
+# Methods
+
+The data was collected under section 3.5.2 of the Wavelength Selection DOE.  
+
+## Setup
+
+The setup used was the red golden setup in transmission mode. The red golden setup consisted of a light source (Ocean Optics DH-2000; serial number 005400821), an optical fiber (Thorlabs; M200L02S-UV), an optical switch (Ocean Optics; INLINE-TTLS), two 200 μm fiber optic patch cables (Thorlab TP00945186), a custom refurbished cuvette holder (Mark One Lifestyle Inc.), a quartz glass cuvette (Thorlabs; CV10Q3500F), and a spectrometer (StellarNet; Silver Nova model, serial number 15040704). The light source was connected to the optical switch by the M200L02S-UV probe.  The shutter then was connected to the right side of the cuvette holder by a TP00945186 probe, using the other TP00945186 probe, the left side of the cuvette holder was connected to the spectrometer. The spectrometer was placed in an environmental chamber (Espec BTL-433) at a temperature of 15 C and 70% relative humidity. The spectrometer responded to a wavelength range from `r round(min(as294$wavelength),digits=2)` nm to `r round(max(as294$wavelength),digits=2)` nm with 2051 individual distinguishable wavelengths. The data was collected by Golden Setup Collection Tool (GSCT), with build number 1.1.5589.42971.  The computer running the tool was a dell laptop running Windows 8.
+
+## Data Analysis
+
+The data was converted from XML format into tidy formatted comma separated values and all trials were concatenated together and compressed.  This was done using a custom bash script that calls gsxmltidy.py and the output is concatenated.  This output is then compressed using gzip. These compress files were read into `r R.Version()$version.string`.  Within R a four stage cleaning process was performed. All stages are optional and can be performed in any order.  They include a conversion phase where the data is converted into the correct data type.  This phase is often performed, in part, during the read operation.  The transform phase is used to manipulate the values of the data and correct any errors.  During the filtering phase, unneeded or erroneous data is removed from the data set.  In the final phase the data is transformed into tidy format, if required.
+
+After the cleaning process, the data is run through a series of checks.  These checks are independent of the cleaning phase and they test the quality of the data and assumptions that are being made.  These would include, but not limited to, checks to see if the data is the correct data type, if there are missing values, the correct number of levels exist in a factor, values are in range and to make sure that all data is present.
+
+The light source produces several very large spikes in the spectrometer data.  This causes saturation in some wavelengths and bleed over into the adjacent wavelengths.  Therefore, if the reflectance data was clipped, reflectance measures greater than `r as.character(FILTER.MAX.REFLECTANCE)`,  in any trial it was removed for all trials collected by a given operator.  To remove the bleed over, wavelengths that were +/- `r FILTER.WAVELENGTH.WIDTH` nm an either side were also removed.
+
+The AS-294 data, which is a tranmission measurement with integration time of `r unique(as294$integration.time/1000)` ms, were loaded, cleaned and checked. The absorbance of the spectrum was calculated based on Equation 1.  
+
+
+
+As it can be seen in Figure 1, five particular peaks are reported for Helma standard: 329, 472, 512, 681, and 875 nm. For better visuallization and comparison studies, the spectrum was divided into 2 different regions: 1) 300-550 nm and 2) 600-900 nm. The reported wavelength with tolerance of +/- 2 nm are presented by two red solid lines (as the allowable lower and upper wavelength shift). It must be noted that the focus of this study is the wavelength accuracy and not the absorbance amplitude (the amplitude is dependent to the light source. There is very high possibility that a different light source was used by Helma for publishing the standard spectrum)
+
+
+
+
+**Figure 1**:Absorbance spectrum of the didymium glass filter with labeled peaks (published by Helma). This is a neodymium oxide and praseodymium oxide doped glass.
+
+# Results
+
+The absorbance measurment was first calculated by using Equation 1, and then graphed in Figure 2. The absorbance profile recorded by StellarNet presented the same trend as reported by Helma. However, the peaks in Figure 1 (reported by Helma) are significantly sharper than Figure 2 (recorderd by StellarNet). This might be due to recording the spectrum at 10 ms integration time.  A lower integration time might reduce the absorbance amplitude (not of concern in this study), but might result in sharper and more differentiable peaks. 
+
+Subsequently, Figure 2 was divided to two parts, which can be seen in Figures 3 and 4. Although the recorded spectrum was a flattened vesion of reported Helma spectrum (Figure 1), the reported 5 didymium-specific peaks were detected in the permissable red-line intervals.  
+
+
+```{r absorbance, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, fig.height=4, fig.width=7, fig.cap="Figure 2:"}
+
+data<-as294
+mean.data<-ddply(as294,.(wavelength),summarize,reading=mean(reading),white=mean(white),dark=mean(dark))
+mean.data$absorbance<--1*log10((mean.data$reading-mean.data$dark)/(mean.data$white-mean.data$dark))
+
+absorb<-ggplot(mean.data,aes(wavelength,absorbance))+geom_line(colour="blue",size=1,alpha=0.5)+theme_classic()+scale_x_continuous(breaks=seq(250, 1000,50))+coord_cartesian(xlim = c(250,  1000),ylim=c(0,1.5))+labs(y=expression(Absorbance(lambda)==1-over(bar(Sample)(lambda) - bar(Dark)(lambda),bar(White)(lambda) - bar(Dark)(lambda)), x=expression(Wavelength~-~lambda~(nm))))+ ggtitle("Absorbance over Wavelength")
+
+absorb
+
+```
+**Figure 2**:Absorbance spectrum of the didymium glass filter collected by StellarNet.
+
+
+
+``` {r echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+png(paste(path.figures.final, 'figure2.png', sep='/'), bg="transparent", width=1000, height=750, units="px")
+absorb
+dev.off()
+```
+
+
+```{r absorbance1, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, fig.height=4, fig.width=7, fig.cap="Figure 3:"}
+
+
+absorb1<-ggplot(mean.data,aes(wavelength,1-absorbance))+geom_line(colour="blue",size=1,alpha=0.5)+theme_classic()+scale_x_continuous(breaks=seq(300, 550,50))+coord_cartesian(xlim = c(300,  550),ylim=c(0,1.5))+labs(y=expression(Absorbance(lambda)), x=expression(Wavelength~-~lambda~(nm)))+ geom_vline(xintercept=c(327,331,470,474,510,514),colour="red",linetype="longdash")+ggtitle("Absorbance over Wavelength-Part1")                                                                                                                                                                                                        
+
+absorb1
+```
+**Figure 3**:Absorbance spectrum of the didymium glass filter collected by StellarNet. Part1: 300-550 nm wavelength.
+
+``` {r echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+png(paste(path.figures.final, 'figure3.png', sep='/'), bg="transparent", width=1000, height=750, units="px")
+absorb1
+dev.off()
+```
+
+
+
+```{r absorbance2, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, fig.height=4, fig.width=7, fig.cap="Figure 1:"}
+
+
+absorb2<-ggplot(mean.data,aes(wavelength,1-absorbance))+geom_line(colour="blue",size=1,alpha=0.5)+theme_classic()+scale_x_continuous(breaks=seq(600, 900,50))+coord_cartesian(xlim = c(600,  900),ylim=c(0,1.5))+labs(y=expression(Absorbance(lambda)), x=expression(Wavelength~-~lambda~(nm)))+ geom_vline(xintercept=c(679,683,873,877),colour="red",linetype="longdash")+ggtitle("Absorbance over Wavelength-Part2")                                                                                                                                                                                                        
+                                                                                                                                                                                      
+absorb2
+```
+**Figure 4**:Absorbance spectrum of the didymium glass filter collected by StellarNet. Part1: 600-800 nm wavelength.
+
+``` {r echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+png(paste(path.figures.final, 'figure4.png', sep='/'), bg="transparent", width=1000, height=750, units="px")
+absorb2
+dev.off()
+```
+
+# Conclusion
+
+The spectroscopic response of Helma didymium glass filter, in transmission mode, was recorded by StellarNet, Silver Nova spectrometer. The abosrbance of the standard cuvette was calculated, graphed, and compared to the published standard spectrum (by Helma).  It was found that StellarNet spectrometer recorded an absorbance spectrum with flatter response, but similar trend to the published spectrum. The five specific didymium peaks were detected in the recorded spectrum. It was found that the spectrometer is within manufacture's specfication for wavelength accuracy. 
+  
+

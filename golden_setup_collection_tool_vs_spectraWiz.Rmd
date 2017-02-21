@@ -1,0 +1,120 @@
+---
+title: "Golden Setup Collection Tool vs. SpectraWiz"
+output: word_document
+---
+
+```{r LoadData, echo=FALSE}
+host.name <- system("hostname", intern=TRUE)
+if (identical(host.name, "mab")) {
+  setwd("~/git/algorithms/analysis/R/final")
+} 
+
+if (identical(host.name, "Ehson-Ghandehari-Macbook-Pro.local")) {
+  setwd("/Users/ehson/Documents/git/algorithms/analysis/R/final")
+} 
+
+
+suppressWarnings(source("constant.R"))
+
+suppressWarnings(source(paste(path.R.final, "library.R", sep='/')))
+suppressWarnings(source(paste(path.R.final, "data.read.R", sep='/')))
+suppressWarnings(source(paste(path.R.final, "data.clean.R", sep='/')))
+suppressWarnings(source(paste(path.R.final, "data.check.R", sep='/')))
+
+
+# collected the GSCT data
+gsct<-as299
+# reading the spectrawiz from data/processed directory
+spectrawiz<-read.csv("/Users/ehson/Documents/git/algorithms/analysis/data/processed/spectrawiz-as-299.csv",header=TRUE,sep=",")
+spectrawiz$X <-NULL
+spectrawiz<-subset(spectrawiz, wavelength<655 | wavelength>659.5)
+
+```
+
+**Data Collection**
+
+* Date: 2015-04-22
+* Ticket: AS-299
+* Git Repo: data.mkone.co/var/git/science/vessyl/as-299.git
+* Git Branch: master
+
+**Analysis**
+
+* Ticket: VA-110
+* Git Repo: git.mkone.co:vessyl-algorithms/algorithms.git
+* Git Branch: va-110
+
+# Table of Contents
+
+# Revision Control
+
+
+# Executive Summary
+
+
+* Qualitatively there is no difference between the data collected by the SW and the GSCT
+* A quantitative analysis was not possible since the data collection tools did not recored readings from the exact wavelengths (mismatch in wavelength)
+* It was observed that GSCT recorded data in a greater wavelength range than SW, resulting in more data points in extreme sides of the spectrum.  However, this issue can be ignored since Science is not interested in data from those regions.  
+
+
+# Introduction
+
+Mark One Lifestyle has a StellarNet Silver Nova spectrometers that comes with the SpectraWiz (SW) software.  Mark One has developed its own software tool called the Golden Setup Collection Tool (GSCT). SpectraWiz is a mature tool and there was concern that the GSCT may not be collecting and processing the data in the same way.  The purpose of this study was to examine these two tools.
+
+# Methods
+
+## Data Collection
+
+The data was collected under AS-299. The data was collected using a clean, dry cuvette. The cuvette was cleaned by rinsing it three times with distilled water using a squirt bottle.  Then it was rinsed once with isopropyl alcohol (IPA) and blown dried with pressurized air.  The clean and empty cuvette was placed in the holder and clamped into position.  The mirrored surface was contralateral to the fibre cable. Using first the GSCT, a series of 128 scans, a trial, was collected and stored. After closing the GSCT, without any change to the system, SW tool was launched.  A series of 128 scans, a trial, was collected and stored. It must be noted that temperature compensation feature was *activated* in the whole process of AS-299 data collection.
+
+## Setup
+
+The setup used in the data collection was the red golden setup. The red golden setup consisted of a light source (Ocean Optics DH-2000; serial number 005400821), an optical fibre (Thorlabs; M200L02S-UV), an optical switch (Ocean Optics; INLINE-TTLS), a custom bifuricated fibre optic reflection probe (Thorlabs; 6 fibres from the light source and 1 fibre to the spectrometer; the length from the light source to the cuvette or the spectrometer to the cuvette is 1 m each; the fibre used in this reflectance probe is a Thorlabs FG550UEC), a custom refurbished cuvette holder (Mark One Lifestyle Inc.), a quartz glass cuvette (Thorlabs; CV10Q3500F) with a custom aluminum mirrored surface, and a spectrometer (StellarNet; Silver Nova model, serial number 15040704). The light source was connected to the optical switch by a M200L02S-UV fibre.  The optical switch was connected to the front side of the cuvette holder by one leg (containing 6 fibre) of the reflection probe, and the the other leg (containing 1 fibre) was connected to the spectrometer. The spectrometer was placed in an environmental chamber (Espec BTL-433) at a temperature of 15 C and 70% relative humidity. The spectrometer responded to a wavelength range from `r round(min(gsct$wavelength),digits=2)` nm to `r round(max(gsct$wavelength),digits=2)` nm with 2051 individual wavelengths. 
+
+The SpectraWiz software was v5.33, and the GSCT software was build number 1.1.5589.42971. The computer running the tool was a Dell laptop running Windows 8.
+
+## Data Analysis
+
+In GSCT case, The data was converted from XML format into tidy formatted comma separated values and all trials were concatenated together and compressed.  This was done using a custom bash script that calls gsxmltidy.py  and the output is concatenated.  This output is then compressed using gzip. These compress files were read into `r R.Version()$version.string`.  Within R a four stage cleaning process was performed. All stages are optional and can be performed in any order.  They include a conversion phase where the data is converted into the correct data type.  This phase is often performed, in part, during the read operation.  The transform phase is used to manipulate the values of the data and correct any errors.  During the filtering phase, unneeded or erroneous data is removed from the data set.  In the final phase the data is transformed into tidy format, if required.
+
+After the cleaning process, the data is run through a series of checks.  These checks are independent of the cleaning phase and they test the quality of the data and assumptions that are being made.  These would include, but not limited to, checks to see if the data is the correct data type, if there are missing values, the correct number of levels exist in a factor, values are in range and to make sure that all data is present.
+
+The light source produces several very large spikes in the spectrometer data.  This causes saturation in some wavelengths and bleed over into the adjacent wavelengths.  Therefore, if the reflectance data was clipped, reflectance measures greater than `r as.character(FILTER.MAX.REFLECTANCE)`,  in any trial it was removed for all trials collected by a given operator.  To remove the bleed over, wavelengths that were +/- `r FILTER.WAVELENGTH.WIDTH` nm an either side were also removed.
+
+The GSCT AS-299 data were loaded, cleaned and checked.
+
+In SW case, The white, dark, and drink trials were collected as “episodic scans,” feature, creating a file with an EP extension. These files were not readable in TextEditor or MS Office. Therefore, the files were read back in SpectrWiz as a 3D layout of 128 scans. Then each scan was saved as an SSM file (readable by Excel and TextEditor). A function was scripted in R programming language, to extract the data, and concatenat the data into a CSV file.  The SW recorded the wavelength range from `r round(min(spectrawiz$wavelength),digits=2)` nm to `r round(max(spectrawiz$wavelength),digits=2)` nm with `r length(unique(spectrawiz$wavelength))` individual wavelengths. The SW AS-299 data were loaded, cleaned, and checked.
+
+
+# Results
+
+Figure 1, shows the mean reflectance collected in each software tool from an empty, clean cuvette.  The thickness of the line is one standard deviation on either side of the mean.  A different colour (red for GSCT, and blue for SW, black is the overlapping region) is used for each tool and a qualitative assessment shows that the signal recorded is in general agreement between the tools. Qualitively, it can be seen that the two lines overlap in all wavelengths. The discrepancies between GSCT and SW spectra at the extreme sides are due to the larger wavelength recording range of GSCT (GSCT: `r round(min(gsct$wavelength),digits=2)` nm to `r round(max(gsct$wavelength),digits=2)` nm vs. SW: `r round(min(spectrawiz$wavelength),digits=2)` nm to `r round(max(spectrawiz$wavelength),digits=2)` nm). There was also a slight difference between two spectra in the Deuterium light saturation region (655-660 nm). It was noticed that GSCT and SW recorded data at different wavelengths.  As an example, GSCT collected data at wavelengths 183.3663, 183.7904, 184.2145, 184.6383, but SW collected data at wavelengths 183, 183.5, 184, 184.5.  Because of this wavelength mismatch, in the data cleaning process, different wavelengths were filtered out because of signal saturation.  This caused the non-overlapping region (655-660 nm range).  
+
+```{r plot.mean , echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, fig.height=4, fig.width=7, fig.cap="Figure 1:"}
+
+gsct.summary<-ddply(gsct,.(wavelength,name),summarise,mean=mean(reading),sd=sd(reading))
+
+spectrawiz.summary<-ddply(spectrawiz,.(wavelength,name),summarise,mean=mean(reading),sd=sd(reading))
+
+plot.mean<-ggplot(gsct.summary, aes(x=wavelength, y=mean)) + theme_classic() + geom_line(aes(colour=factor(gsct.summary$name))) + ggtitle("GSCT vs. SW") + geom_line(data=spectrawiz.summary,aes(x=wavelength,y=mean,colour=factor(spectrawiz.summary$name)))+labs(y="Mean Reflectance +/- SD", x="Wavelength (nm)") + geom_errorbar(data=gsct.summary,aes(ymin=mean-sd, ymax=mean+sd), width=.1) + geom_errorbar(data=spectrawiz.summary,aes(ymin=mean-sd, ymax=mean+sd), width=.1)+scale_x_continuous(breaks=seq(200,1100,100),limits=c(min(gsct.summary$wavelength), max(gsct.summary$wavelength))) + scale_y_continuous(breaks=seq(0,max(gsct.summary$mean),5000),limits=c(0, max(gsct.summary$mean))) + coord_cartesian(xlim = c(min(gsct.summary$wavelength), max(gsct.summary$wavelength)))+scale_color_discrete(name ="Tool", labels=c("SW", "GSCT"))
+
+plot.mean
+```
+
+```{r echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+png(paste(path.figures.final, 'figure1.png', sep='/'), width=1500, height=800, units='px', pointsize=24)
+plot.mean
+dev.off()
+```
+
+**Figure 1**: Reflectance for both software tools.  The data slightly mismatched in the Deuterium light saturation region (655-660 nm).
+
+As a further study, it would be valuable to compare the difference of the two spectra at each wavelength with a two-sided Student's t-test with equal variances (with hypothesis that there is no difference between the two spectra; this difference is zero).  However, because of the reported wavelength mismatch this would not be a reasonable test to run.
+
+# Conclusion
+
+This study has demonstrated that qualitatively there is no difference between the data collected by the SW and the GSCT. There were differences between the data 
+in the extreme sides of the spectra (below 183 nm and above 1117.5 nm; the tools recorded data in different ranges; these regions are not important for Science), and in the 655-660 nm light saturation regions (due to wavelength mismatch).  Because of the wavelength mismatch, no quantitative analysis was performed on the data. In case of a request for further quantitative studies, the issue of minor mismatch between data collection tools must be resolved first.  
+
+
+
